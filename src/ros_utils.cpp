@@ -116,6 +116,51 @@ void ParseOusterCloud(
   }
 }
 
+void ParseGpuLidarCloud(
+  const sensor_msgs::msg::PointCloud2::SharedPtr msg,
+  pslam::PointCloud3f& scan_cloud,
+  std::vector<float>& scan_intensities,
+  std::vector<double>& scan_stamps)
+{
+  int x_offset = -1;
+  int y_offset = -1;
+  int z_offset = -1;
+  int intensity_offset = -1;
+
+  for (const auto& field : msg->fields) {
+    if (field.name == "x") x_offset = field.offset;
+    else if (field.name == "y") y_offset = field.offset;
+    else if (field.name == "z") z_offset = field.offset;
+    else if (field.name == "ring") intensity_offset = field.offset; /* This is not a bug, gpu_lidar stores intensity in 'ring' field */
+  }
+
+  const size_t point_step = msg->point_step;
+  const size_t point_count = msg->width * msg->height;
+  const auto& data = msg->data;
+
+  scan_cloud.resize(point_count);
+  scan_intensities.resize(point_count);
+  scan_stamps.resize(point_count);
+
+  auto const scan_timestamp_s = rclcpp::Time(msg->header.stamp).nanoseconds() * 1e-9;
+  double current_scan_timestamp_s = scan_timestamp_s;
+
+  for (size_t i = 0; i < point_count; ++i) {
+    const uint8_t* point_ptr = &data[i * point_step];
+
+    pslam::Point3f pt;
+    std::memcpy(&pt.x(), point_ptr + x_offset, sizeof(float));
+    std::memcpy(&pt.y(), point_ptr + y_offset, sizeof(float));
+    std::memcpy(&pt.z(), point_ptr + z_offset, sizeof(float));
+    scan_cloud[i] = pt;
+
+    std::memcpy(&scan_intensities[i], point_ptr + intensity_offset, sizeof(float));
+
+    std::memcpy(&scan_stamps[i], &current_scan_timestamp_s, sizeof(double));
+    // printf("scan_stamps[%lu] = %.10lf\n", i, scan_stamps[i]);
+  }
+}
+
 void ParsePSLAMCloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg,
   pslam::PointCloud3f& scan_cloud,

@@ -47,6 +47,8 @@ class LIO3DNode : public rclcpp::Node {
       RCLCPP_INFO(this->get_logger(), "LiDAR type: Livox");
     } else if (lidar_type_ == "ouster") {
       RCLCPP_INFO(this->get_logger(), "LiDAR type: Ouster");
+    } else if (lidar_type_ == "gpu_lidar") {
+      RCLCPP_INFO(this->get_logger(), "LiDAR type: Gazebo gpu_lidar");
     } else {
       std::cout << "LiDAR type: Unknown (" << lidar_type_ << ")" << std::endl;
       RCLCPP_WARN(this->get_logger(),
@@ -161,6 +163,9 @@ class LIO3DNode : public rclcpp::Node {
     } else if (lidar_type_ == "ouster") {
       ParseOusterCloud(msg, rclcpp::Time(msg->header.stamp).seconds(),
         scan_cloud, scan_intensities, scan_stamps);
+    }
+    else if (lidar_type_ == "gpu_lidar") {
+      ParseGpuLidarCloud(msg, scan_cloud, scan_intensities, scan_stamps);
     } else {
       ParsePSLAMCloud(msg, scan_cloud, scan_intensities, scan_stamps);
     }
