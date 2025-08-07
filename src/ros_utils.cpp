@@ -143,6 +143,10 @@ void ParseGpuLidarCloud(
   scan_stamps.resize(point_count);
 
   auto const scan_timestamp_s = rclcpp::Time(msg->header.stamp).seconds();
+  auto const SCAN_RATE_Hz = 10.;
+  auto const SCAN_DURATION_s = 1. / SCAN_RATE_Hz;
+  auto const SCAN_DURATION_PER_POINT_s = SCAN_DURATION_s / point_count;
+  auto const SCAN_START = scan_timestamp_s - SCAN_DURATION_s / 2.;
 
   for (size_t i = 0; i < point_count; ++i) {
     const uint8_t* point_ptr = &data[i * point_step];
@@ -155,7 +159,8 @@ void ParseGpuLidarCloud(
 
     std::memcpy(&scan_intensities[i], point_ptr + intensity_offset, sizeof(float));
 
-    std::memcpy(&scan_stamps[i], &scan_timestamp_s, sizeof(double));
+    double current_scan_timestamp_s = SCAN_START + i * SCAN_DURATION_PER_POINT_s;
+    std::memcpy(&scan_stamps[i], &current_scan_timestamp_s, sizeof(double));
     // printf("scan_stamps[%lu] = %.10lf\n", i, scan_stamps[i]);
   }
 }
