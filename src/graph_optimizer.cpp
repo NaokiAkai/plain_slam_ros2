@@ -137,7 +137,7 @@ void GraphOptimizer::Optimize(
     Eigen::SparseMatrix<float> H(num_variables, num_variables);
     H.setFromTriplets(H_list.begin(), H_list.end());
     for (size_t i = 0; i < num_variables; ++i) {
-      H.coeffRef(i, i) += 1e-5f;
+      H.coeffRef(i, i) += 1e-3f;
     }
 
     const Eigen::SimplicialLDLT<Eigen::SparseMatrix<float>> solver(H);

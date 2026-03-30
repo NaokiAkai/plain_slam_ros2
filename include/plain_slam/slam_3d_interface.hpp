@@ -109,6 +109,10 @@ class SLAM3DInterface {
     return map_cloud_;
   }
 
+  const std::vector<Sophus::SE3f> GetPoseGraph() const {
+    return pose_graph_;
+  }
+
   const std::vector<float> GetMapIntensities() const {
     return map_intensities_;
   }

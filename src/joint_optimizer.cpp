@@ -48,6 +48,9 @@ bool JointOptimizer::Estimate(
   State& updated_state,
   StateCov& updated_cov,
   NormalMap& normal_map) {
+  (void)prev_state;
+  (void)preint_time;
+  (void)imu_measures;
   const State initial = pred_state;
   const Eigen::Matrix3f initial_R = initial.T.rotationMatrix();
   const Eigen::Matrix3f initial_Ril = initial.Til.rotationMatrix();
@@ -63,8 +66,8 @@ bool JointOptimizer::Estimate(
 
   using Matrix1x24f = Eigen::Matrix<float, 1, 24>;
 
-  const float dt = preint_time;
-  const float dt2 = dt * dt;
+  // const float dt = preint_time;
+  // const float dt2 = dt * dt;
 
   for (size_t iter_num = 0; iter_num < max_iter_num; ++iter_num) {
     std::vector<float> rs;
@@ -76,11 +79,10 @@ bool JointOptimizer::Estimate(
     const Eigen::Matrix3f Roi = state.T.rotationMatrix();
     const Eigen::Matrix3f Ril = state.Til.rotationMatrix();
 
-    Eigen::Vector3f phi = Eigen::Vector3f::Zero();
-    for (const IMUMeasure& m: imu_measures) {
-      phi += m.gyro - state.gb;
-    }
-    phi *= dt;
+    // Eigen::Vector3f phi = Eigen::Vector3f::Zero();
+    // for (const IMUMeasure& m: imu_measures) {
+    //   phi += (m.gyro - state.gb) * m.dt;
+    // }
 
     size_t used_points_num = 0;
     size_t corresp_num = 0;
@@ -107,17 +109,17 @@ bool JointOptimizer::Estimate(
       const Eigen::Matrix<float, 1, 3> dr_dRoi = nT * Sophus::SO3f::hat(Rpi).matrix();
       J.block<1, 3>(0, 3) = dr_dRoi;
 
-      const Eigen::Matrix<float, 1, 3> dr_dv = -nT * dt;
-      J.block<1, 3>(0, 6) = dr_dv;
+      // const Eigen::Matrix<float, 1, 3> dr_dv = -nT * dt;
+      // J.block<1, 3>(0, 6) = dr_dv;
 
-      const Eigen::Matrix<float, 1, 3> dr_dbg = dr_dRoi * RightJacobianSO3(phi) * dt;
-      J.block<1, 3>(0, 9) = dr_dbg;
+      // const Eigen::Matrix<float, 1, 3> dr_dbg = dr_dRoi * RightJacobianSO3(phi) * dt;
+      // J.block<1, 3>(0, 9) = dr_dbg;
 
-      const Eigen::Matrix<float, 1, 3> dr_dba = 0.5f * nT * prev_state.T.rotationMatrix() * dt2;
-      J.block<1, 3>(0, 12) = dr_dba;
+      // const Eigen::Matrix<float, 1, 3> dr_dba = 0.5f * nT * prev_state.T.rotationMatrix() * dt2;
+      // J.block<1, 3>(0, 12) = dr_dba;
 
-      const Eigen::Matrix<float, 1, 3> dr_dg = -0.5f * nT * dt2;
-      J.block<1, 3>(0, 15) = dr_dg;
+      // const Eigen::Matrix<float, 1, 3> dr_dg = -0.5f * nT * dt2;
+      // J.block<1, 3>(0, 15) = dr_dg;
 
       const Eigen::Matrix<float, 1, 3> dr_dtil = nT * Roi;
       J.block<1, 3>(0, 18) = dr_dtil;
@@ -136,7 +138,9 @@ bool JointOptimizer::Estimate(
     active_points_rate_ = static_cast<float>(corresp_num)
                         / static_cast<float>(used_points_num);
 
-    const float rinv = 1e-6f;
+    // const float rinv = 1e-6f;
+    float rinv = 1e-1f / std::max<size_t>(1, corresp_num);
+    if (rinv < 1e-6f) rinv = 1e-6f;
     Eigen::Matrix<float, Eigen::Dynamic, 1> r(corresp_num, 1);
     Eigen::Matrix<float, Eigen::Dynamic, 24> J
       = Eigen::Matrix<float, Eigen::Dynamic, 24>::Zero(corresp_num, 24);
@@ -205,7 +209,7 @@ bool JointOptimizer::Estimate(
 
     const float epsilon = d.norm();
     // std::cout << "iteration = " << iter_num + 1 << ", epsilon = " << epsilon << std::endl;
-    if (iter_num > 0 && epsilon < convergence_th) {
+    if (iter_num > 1 && epsilon < convergence_th) {
       has_converged = true;
       cov = (I - K * J) * P;
       break;

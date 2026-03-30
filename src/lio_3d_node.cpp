@@ -79,14 +79,14 @@ class LIO3DNode : public rclcpp::Node {
     std::string pointcloud_topic;
     this->get_parameter("pointcloud_topic", pointcloud_topic);
     pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-      pointcloud_topic, rclcpp::SensorDataQoS(),
+      pointcloud_topic, rclcpp::SensorDataQoS().keep_last(1),
       std::bind(&LIO3DNode::PointcloudCallback, this, std::placeholders::_1));
 
     this->declare_parameter<std::string>("imu_topic", "/livox/imu");
     std::string imu_topic;
     this->get_parameter("imu_topic", imu_topic);
     imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      imu_topic, rclcpp::SensorDataQoS(),
+      imu_topic, rclcpp::SensorDataQoS().keep_last(10000),
       std::bind(&LIO3DNode::ImuCallback, this, std::placeholders::_1));
 
     this->declare_parameter<std::string>("imu_pose_topic", "/pslam/imu_pose");
@@ -173,11 +173,11 @@ class LIO3DNode : public rclcpp::Node {
     // const auto t2 = std::chrono::high_resolution_clock::now();
     // std::cout << "elapsed time [msec]: " 
     //   << std::chrono::duration_cast<std::chrono::milliseconds>
-    //        (t2 - t1).count() << std::endl;
+    //   (t2 - t1).count() << std::endl;
 
     // Publish ROS messages
     const Sophus::SE3f imu_pose = lio_.GetIMUPose();
-    PublishePose(imu_pose_pub_, odom_frame_, msg->header.stamp, imu_pose);
+    PublishPose(imu_pose_pub_, odom_frame_, msg->header.stamp, imu_pose);
 
     BroadcastTransform(tf_broadcaster_, odom_frame_, imu_frame_,
       msg->header.stamp, imu_pose);
@@ -233,7 +233,7 @@ class LIO3DNode : public rclcpp::Node {
     pslam::State imu_odom_state;
     pslam::StateCov imu_odom_state_cov;
     lio_.GetIMUOdometry(imu_odom_state, imu_odom_state_cov);
-    PublisheOdometry(imu_odom_pub_, odom_frame_, imu_frame_, msg->header.stamp,
+    PublishOdometry(imu_odom_pub_, odom_frame_, imu_frame_, msg->header.stamp,
       imu_odom_state, imu_odom_state_cov, measure);
   }
 

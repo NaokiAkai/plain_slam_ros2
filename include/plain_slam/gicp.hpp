@@ -71,6 +71,10 @@ class GICP {
     return has_converged_;
   }
 
+  float GetHuberDelta() const {
+    return huber_delta_;
+  }
+
   Sophus::SE3f GetTransformation() const {
     return T_;
   }

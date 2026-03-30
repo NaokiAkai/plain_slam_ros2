@@ -14,6 +14,9 @@ find src/ include/plain_slam/ -name "*.cpp" -o -name "*.hpp" \
   | grep -v "ros_utils*" \
   | grep -v "scan_intensity_matcher*" \
   | grep -v "lidar_imu_calibration*" \
+  | grep -v "GNSSConvert*" \
+  | grep -v "odom_gnss_recorder*" \
+  | grep -v "tgm_estimator*" \
   | xargs cloc
 
 echo -e "\n\n\n"
