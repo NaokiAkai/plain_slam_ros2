@@ -180,6 +180,8 @@ void SLAM3DInterface::SetData(
   latest_keyframe_odom_pose_ = odom_pose;
 
   // Find loop edges
+  const size_t latest_idx = pose_graph_.size() - 1;
+  const float orig_huber_delta = gicp_.GetHuberDelta();
   gicp_.SetSourceCloud(filtered_cloud, false);
   const size_t prev_loop_edges_size = loop_edges_.size();
 
@@ -192,6 +194,13 @@ void SLAM3DInterface::SetData(
     const float dz = fabs(delta_trans.z());
     if (delta > loop_detection_distance_thresh_ || dz > loop_detection_height_thresh_) {
       continue;
+    }
+
+    const size_t didx = latest_idx - target_indices[i];
+    if (didx > max_num_loop_candidates_) {
+      gicp_.SetHuberDelta(orig_huber_delta * 10.0f);
+    } else {
+      gicp_.SetHuberDelta(orig_huber_delta);
     }
 
     std::string raw_cloud_file, filtered_cloud_file;
@@ -221,6 +230,7 @@ void SLAM3DInterface::SetData(
       loop_edges_.emplace_back(loop_edge);
     }
   }
+  gicp_.SetHuberDelta(orig_huber_delta);
 
   // Skip optimization if no new loop closures were detected
   const size_t new_loop_edges_size = loop_edges_.size();

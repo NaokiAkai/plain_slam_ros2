@@ -2,10 +2,10 @@ lio_3d_node:
   ros__parameters:
     lidar_type: "livox"
     use_as_localizer: false
-    map_cloud_dir: "/tmp/pslam_data/"
+    map_cloud_dir: "/home/raspi/endoji_map2/"
     param_files_dir: "" # LIO parameters must be located under plain_slam_ros2/config/
 
-    pointcloud_topic: "/livox/points"
+    pointcloud_topic: "/livox/lidar"
     imu_topic: "/livox/imu"
 
     imu_pose_topic: "/pslam/imu_pose"

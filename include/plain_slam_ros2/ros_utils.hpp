@@ -30,6 +30,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <builtin_interfaces/msg/time.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -62,13 +63,19 @@ void ParsePSLAMCloud(
   const sensor_msgs::msg::PointCloud2::SharedPtr msg,
   pslam::PointCloud3f& scan_cloud);
 
-void PublishePose(
+void PublishPose(
   const rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub,
   const std::string& frame_id,
   const builtin_interfaces::msg::Time& stamp,
   const Sophus::SE3f& T);
 
-void PublisheOdometry(
+void PublishPoseArray(
+  const rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pub,
+  const std::string& frame_id,
+  const builtin_interfaces::msg::Time& stamp,
+  const std::vector<Sophus::SE3f>& Ts);
+
+void PublishOdometry(
   const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub,
   const std::string& frame_id,
   const std::string& child_frame_id,
@@ -98,7 +105,7 @@ void PublishPointCloud(
   const std::vector<float>& scan_intensities,
   const std::vector<double>& scan_stamps);
 
-void PublishePointMarkers(
+void PublishPointMarkers(
   const rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub,
   const std::string& frame_id,
   const builtin_interfaces::msg::Time& stamp,

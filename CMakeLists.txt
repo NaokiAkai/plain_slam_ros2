@@ -39,7 +39,6 @@ add_executable(lio_3d_node
   src/normal_map.cpp
   src/hierarchical_geometric_observer.cpp
   src/joint_optimizer.cpp)
-  # src/lidar_imu_calibration.cpp)
 
 target_include_directories(lio_3d_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -161,6 +160,7 @@ ament_target_dependencies(
 )
 
 install(TARGETS lidar_lidar_calibration_node DESTINATION lib/${PROJECT_NAME})
+
 
 
 

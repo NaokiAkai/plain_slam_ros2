@@ -5,7 +5,11 @@ src/scan_intensity_matcher.cpp
 include/plain_slam/scan_intensity_matcher.hpp
 src/lidar_imu_calibration.cpp
 include/plain_slam/lidar_imu_calibration.hpp
-
+src/GNSSConvert.cpp
+src/GNSSConvert.h
+src/odom_gnss_recorder.cpp
+src/tgm_estimator.cpp
+	
 data
 data/*
 

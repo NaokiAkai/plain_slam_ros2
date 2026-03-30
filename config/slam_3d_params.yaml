@@ -3,20 +3,20 @@ preprocess:
   scan_cloud_filter_size: 0.1
 
 keyframe:
-  distance_th: 20.0
+  distance_th: 10.0
   angle_th: 1000.0 # degree
-  min_local_map_matching_rate: 0.9
+  min_local_map_matching_rate: 0.95
 
 loop_closure:
   num_loop_candidates: 10
   loop_detection_distance_thresh: 30.0
-  loop_detection_height_thresh: 1.5
+  loop_detection_height_thresh: 10.0
   error_average_th: 1.0
   active_points_rate_th: 0.5
   gicp_max_iteration: 5
-  gicp_epsilon: 0.1
+  gicp_epsilon: 0.5
   gicp_max_correspondence_dist: 10.0
-  gicp_huber_delta: 0.1
+  gicp_huber_delta: 0.5
 
 pose_graph:
-  huber_delta: 0.0001
+  huber_delta: 0.1

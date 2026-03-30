@@ -24,6 +24,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -72,14 +73,14 @@ class SLAM3DNode : public rclcpp::Node {
       sensor_msgs::msg::PointCloud2>>(pose_sub_, cloud_sub_, 10);
 
     sync_->registerCallback(
-      std::bind(&SLAM3DNode::sync_callback, this, std::placeholders::_1, std::placeholders::_2));
+      std::bind(&SLAM3DNode::SyncCallback, this, std::placeholders::_1, std::placeholders::_2));
 
     // These published topics are used for visualization in RViz.
     this->declare_parameter<std::string>("filtered_map_cloud_topic", "/pslam/filtered_map_cloud");
     std::string filtered_map_cloud_topic;
     this->get_parameter("filtered_map_cloud_topic", filtered_map_cloud_topic);
     filtered_map_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      filtered_map_cloud_topic, 1);
+      filtered_map_cloud_topic, rclcpp::QoS(1).transient_local().reliable());
 
     this->declare_parameter<std::string>("graph_nodes_topic", "/pslam/pose_graph_nodes");
     std::string graph_nodes_topic;
@@ -98,6 +99,12 @@ class SLAM3DNode : public rclcpp::Node {
     this->get_parameter("loop_edges_topic", loop_edges_topic);
     loop_edges_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
       loop_edges_topic, 1);
+
+    this->declare_parameter<std::string>("graph_poses_topic", "/pslam/pose_graph_poses");
+    std::string graph_poses_topic;
+    this->get_parameter("graph_poses_topic", graph_poses_topic);
+    graph_poses_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+      graph_poses_topic, 1);
 
     // The SLAM node broadcasts a transformation from map_frame_ to odom_frame_.
     this->declare_parameter<std::string>("map_frame", "map");
@@ -121,7 +128,7 @@ class SLAM3DNode : public rclcpp::Node {
 
  private:
 
-  void sync_callback(
+  void SyncCallback(
     const geometry_msgs::msg::PoseStamped::ConstSharedPtr pose,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud) {
     const Eigen::Vector3f odom_trans = Eigen::Vector3f(pose->pose.position.x,
@@ -162,7 +169,7 @@ class SLAM3DNode : public rclcpp::Node {
 
       pslam::PointCloud3f graph_nodes;
       slam_.GetGraphNodes(graph_nodes);
-      PublishePointMarkers(graph_nodes_pub_, map_frame_, pose->header.stamp,
+      PublishPointMarkers(graph_nodes_pub_, map_frame_, pose->header.stamp,
         "graph_nodes", 0, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, graph_nodes);
 
       pslam::PointCloud3f odom_edges_start_points, odom_edges_end_points;
@@ -176,6 +183,9 @@ class SLAM3DNode : public rclcpp::Node {
       PublishLineMarkers(loop_edges_pub_, map_frame_, pose->header.stamp,
         "loop_edges", 2, 0.1f, 0.0f, 1.0f, 0.0f, 1.0f,
         loop_edges_start_points, loop_edges_end_points);
+
+      const std::vector<Sophus::SE3f> graph_poses = slam_.GetPoseGraph();
+      PublishPoseArray(graph_poses_pub_, map_frame_, pose->header.stamp, graph_poses);
 
       slam_.SetPoseGraphUpdated(false);
      }
@@ -191,6 +201,7 @@ class SLAM3DNode : public rclcpp::Node {
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr graph_nodes_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr odom_edges_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr loop_edges_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr graph_poses_pub_;
 
   pslam::SLAM3DInterface slam_;
 

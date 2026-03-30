@@ -31,8 +31,8 @@ NormalMap::NormalMap() {
   keyframe_poses_ = boost::circular_buffer<Sophus::SE3f>(max_keyframe_size);
   aligned_scan_clouds_ = boost::circular_buffer<PointCloud3f>(max_keyframe_size);
 
-  filter_size_ = 0.25f;
-  normal_eigen_val_thresh_ = 0.01f;
+  filter_size_ = 0.1f;
+  normal_eigen_val_thresh_ = 0.2f;
   num_normal_points_ = 10;
 }
 
@@ -128,7 +128,12 @@ bool NormalMap::FindCorrespondence(
     }
 
     int min_idx;
-    const float val = solver.eigenvalues().minCoeff(&min_idx);
+    float val = solver.eigenvalues().minCoeff(&min_idx);
+    const Eigen::Vector3f evals = solver.eigenvalues();
+    const float lambda0 = evals(0);
+    const float lambda1 = evals(1);
+    const float lambda2 = evals(2);
+    val = val / (lambda0 + lambda1 + lambda2);
     if (val > normal_eigen_val_thresh_) {
       normal_valid_flags_[idx] = false;
       return false;

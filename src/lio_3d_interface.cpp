@@ -29,7 +29,7 @@ namespace pslam {
 LIO3DInterface::LIO3DInterface() {
   localization_mode_ = false;
 
-  imu_measures_ = boost::circular_buffer<IMUMeasure>(500);
+  imu_measures_ = boost::circular_buffer<IMUMeasure>(1000);
   acc_scale_ = 1.0f;
 
   gravity_estimation_enabled_ = true;
@@ -50,16 +50,6 @@ LIO3DInterface::LIO3DInterface() {
 
   imu_state_cov_ = StateCov::Identity();
   imu_odom_state_cov_ = imu_state_cov_;
-
-  const Eigen::Vector3f til = Eigen::Vector3f(-0.006253f, 0.011775f, 0.028535f);
-  Eigen::Matrix3f Ril;
-  Ril << -1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f;
-  imu_state_.Til = Sophus::SE3f(Ril, til);
-
-  // const Eigen::Vector3f til = Eigen::Vector3f(-0.013, -0.01862, 0.06125);
-  // Eigen::Matrix3f Ril;
-  // Ril << 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f;
-  // imu_state_.Til = Sophus::SE3f(Ril, til);
 }
 
 LIO3DInterface::~LIO3DInterface() {
@@ -172,34 +162,29 @@ void LIO3DInterface::SetScanCloud(
   // Retrieve relevant IMU measurements
   {
     std::lock_guard<std::mutex> lock(imu_mutex_);
-    size_t erase_idx = 0;
     for (size_t i = 0; i < imu_measures_.size(); ++i) {
       const auto& imu = imu_measures_[i];
       const double stamp = imu.stamp;
-      if (stamp < start_stamp) {
-        erase_idx++;
-      } else if (stamp <= end_stamp) {
+      if (start_stamp <= stamp && stamp <= end_stamp) {
         relevant_imu_measures.push_back(imu);
-        erase_idx++;
-      } else {
+      } else if (stamp > end_stamp) {
         break;
       }
     }
-
-    if (erase_idx > 0) {
-      imu_measures_.erase_begin(erase_idx);
-    }
   }
 
-  if (relevant_imu_measures.empty()) {
-    std::cerr << "[WARN] No matching IMU data for scan timestamp range ["
-      << start_stamp << ", " << end_stamp << "]" << std::endl;
-    // printf("%.10lf --- %.10lf\n", imu_measures_.front().stamp, imu_measures_.back().stamp);
-    // return;
+  if (relevant_imu_measures.size() == 0) {
+    std::cerr << "[WARNING] No relevant IMU measurements were found. "
+      << "This may indicate that the main LIO process is too computationally expensive, "
+      << "causing IMU measurements to be dropped. "
+      << "As a result, LIO estimation may become unstable or diverge. "
+      << "Please review the parameters and ensure that the computation time of a single LIO update "
+      << "does not exceed the LiDAR measurement cycle."
+      << std::endl;
   }
 
+  // Save prev state and preintegration
   const State prev_state = imu_state_;
-
   if (relevant_imu_measures.size() > 0) {
     preintegrator_.Preintegration(relevant_imu_measures, imu_state_, imu_state_cov_);
     preintegrator_.DeskewScanCloud(imu_state_, relevant_imu_measures, scan_stamps_, scan_cloud_);
@@ -210,10 +195,6 @@ void LIO3DInterface::SetScanCloud(
 
   const VoxelGridFilter vgf(scan_cloud_filter_size_);
   const PointCloud3f filtered_scan_cloud = vgf.filter(scan_cloud_);
-  // PointCloud3f filtered_scan_cloud;
-  // std::vector<float> filtered_scan_intensities;
-  // vgf.filter(scan_cloud_, scan_intensities_,
-  //   filtered_scan_cloud, filtered_scan_intensities);
 
   float active_points_rate;
 
@@ -240,7 +221,7 @@ void LIO3DInterface::SetScanCloud(
   }
 
   // PrintState(imu_state_);
-  WriteLiDARPose(scan_stamps.front(), imu_state_);
+  // WriteLiDARPose(scan_stamps.front(), imu_state_);
   // std::cout << imu_state_cov_.block<6, 6>(0, 0) << std::endl;
 
   // Compensate for the odometry state
@@ -256,13 +237,18 @@ void LIO3DInterface::SetScanCloud(
     aligned_scan_cloud_[i] = imu_state_.T * scan_cloud_[i];
   }
 
-  // Perform LiDAR-IMU calibration
-  // Finalize the LIO process after calibration
-  // const float delta_time = preintegrator_.GetPreintegrationTime();
-  // const Sophus::SE3f imu_rel_T = preintegrator_.GetDeltaT();
-  // const Sophus::SE3f Tol = imu_state_.T * imu_state_.Til;
-  // li_calibrator_.SetData(delta_time, imu_rel_T, Tol);
-  // li_calibrator_.Calibrate(imu_state_.Til);
+  // Print the estimated pose for initial pose setting
+  // {
+  //   const Eigen::Vector3f t = imu_state_.T.translation();
+  //   const Eigen::Matrix3f R = imu_state_.T.rotationMatrix();
+  //   printf("initial_pose:\n");
+  //   printf("  translation: [%f, %f, %f]\n", t.x(), t.y(), t.z());
+  //   printf("  rotation_matrix: [%f, %f, %f, %f, %f, %f, %f, %f, %f]\n",
+  //     R(0, 0), R(0, 1), R(0, 2),
+  //     R(1, 0), R(1, 1), R(1, 2),
+  //     R(2, 0), R(2, 1), R(2, 2));
+  //   std::cout << std::endl;
+  // }
 
   // Update the local map if the new state is classified as a keyframe
   if (localization_mode_) {

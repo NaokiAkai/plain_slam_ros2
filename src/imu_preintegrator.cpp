@@ -28,10 +28,10 @@ namespace pslam {
 
 IMUPreintegrator::IMUPreintegrator() {
   process_noise_cov_ = Eigen::Matrix<float, 12, 12>::Identity();
-  process_noise_cov_.block<3, 3>(0, 0) *= 1e4f;
+  process_noise_cov_.block<3, 3>(0, 0) *= 1e5f;
   process_noise_cov_.block<3, 3>(3, 3) *= 1e6f;
-  process_noise_cov_.block<3, 3>(6, 6) *= 1.0f;
-  process_noise_cov_.block<3, 3>(9, 9) *= 100.0f;
+  process_noise_cov_.block<3, 3>(6, 6) *= 1e4f;
+  process_noise_cov_.block<3, 3>(9, 9) *= 1e5f;
 }
 
 IMUPreintegrator::~IMUPreintegrator() {

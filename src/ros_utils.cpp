@@ -190,7 +190,7 @@ void ParsePSLAMCloud(
   }
 }
 
-void PublishePose(
+void PublishPose(
   const rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub,
   const std::string& frame_id,
   const builtin_interfaces::msg::Time& stamp,
@@ -213,7 +213,36 @@ void PublishePose(
   pub->publish(msg);
 }
 
-void PublisheOdometry(
+void PublishPoseArray(
+  const rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pub,
+  const std::string& frame_id,
+  const builtin_interfaces::msg::Time& stamp,
+  const std::vector<Sophus::SE3f>& Ts)
+{
+  geometry_msgs::msg::PoseArray msg;
+  msg.header.stamp = stamp;
+  msg.header.frame_id = frame_id;
+  msg.poses.reserve(Ts.size());
+
+  for (const auto& T : Ts) {
+    geometry_msgs::msg::Pose p;
+    const Eigen::Vector3f t = T.translation();
+    Eigen::Quaternionf q(T.rotationMatrix());
+    q.normalize();
+    p.position.x = t.x();
+    p.position.y = t.y();
+    p.position.z = t.z();
+    p.orientation.x = q.x();
+    p.orientation.y = q.y();
+    p.orientation.z = q.z();
+    p.orientation.w = q.w();
+    msg.poses.push_back(p);
+  }
+
+  pub->publish(msg);
+}
+
+void PublishOdometry(
   const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub,
   const std::string& frame_id,
   const std::string& child_frame_id,
@@ -396,7 +425,7 @@ void PublishPointCloud(
   pub->publish(msg);
 }
 
-void PublishePointMarkers(
+void PublishPointMarkers(
   const rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub,
   const std::string& frame_id,
   const builtin_interfaces::msg::Time& stamp,
