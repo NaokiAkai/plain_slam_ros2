@@ -53,6 +53,12 @@ void ParseOusterCloud(
   std::vector<float>& scan_intensities,
   std::vector<double>& scan_stamps);
 
+void ParseGpuLidarCloud(
+  const sensor_msgs::msg::PointCloud2::SharedPtr msg,
+  pslam::PointCloud3f& scan_cloud,
+  std::vector<float>& scan_intensities,
+  std::vector<double>& scan_stamps);
+
 void ParsePSLAMCloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg,
   pslam::PointCloud3f& scan_cloud,
